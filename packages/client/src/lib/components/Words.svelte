@@ -8,7 +8,7 @@
   let words = $derived(user?.words ?? []);
 </script>
 
-<div class="flex items-center gap-6 flex-wrap min-h-10">
+<div class="flex items-center gap-6 gap-y-4 flex-wrap min-h-10">
   {#each words as word}
     <div class="flex items-center gap-0.5">
       {#each word.split("") as tile}
