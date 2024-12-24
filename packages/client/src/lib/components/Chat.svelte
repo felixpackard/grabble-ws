@@ -3,7 +3,7 @@
   import { CirclePlus, Replace, Send, Swords } from "lucide-svelte";
 	import { SystemMessageType } from "shared/types/message";
 	import { MessageType } from "shared/types/user";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 
   let message = $state("");
 
@@ -27,8 +27,8 @@
   });
 
   $effect(() => {
-    if (client?.getUserMessages()) {
-      container.scrollTop = container.scrollHeight;
+    if (client?.getChatMessages().length && container) {
+      container.scroll({ top: container.scrollHeight, behavior: "smooth" });
     }
   });
 
@@ -49,7 +49,7 @@
   </div>
   <div bind:this={container} class="flex flex-col gap-2 p-4 flex-1 border-2 border-gray-300 rounded-lg shadow-md overflow-auto">
     <div class="flex flex-col gap-2">
-      {#each client?.getUserMessages() ?? [] as message}
+      {#each client?.getChatMessages() ?? [] as message}
         <div>
           {#if message.type === MessageType.User}<span class="font-bold">{message.data.username}:</span> {message.data.message}{/if}
           {#if message.type === MessageType.System}

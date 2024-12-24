@@ -252,7 +252,7 @@ export class WebSocketClient {
     return this.roomCode;
   }
 
-  public getUserMessages() {
+  public getChatMessages() {
     return this.chatMessages;
   }
 
