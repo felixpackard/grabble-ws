@@ -6,6 +6,7 @@ import {
 	type SendMessageMessage,
 	type ServerMessageDataType,
 	ServerMessageType,
+	SystemMessageType,
 } from "shared/types/message";
 import type { Room } from "shared/types/room";
 import { randomUUIDv7, type Server, type ServerWebSocket } from "bun";
@@ -358,6 +359,20 @@ export class MessageHandler {
 		);
 	}
 
+	private broadcastChatMessage(
+		server: Server,
+		ws: ServerWebSocket<WebSocketData>,
+		message: SendMessageMessage,
+	) {
+		server.publish(
+			ws.data.roomCode!,
+			this.createResponse(ServerMessageType.UserMessage, {
+				username: ws.data.user.username!,
+				message: message.data.message,
+			}),
+		);
+	}
+
 	private handleMessage(
 		server: Server,
 		ws: ServerWebSocket<WebSocketData>,
@@ -365,35 +380,68 @@ export class MessageHandler {
 	): void {
 		this.assertInRoom(ws);
 
-		server.publish(
-			ws.data.roomCode,
-			this.createResponse(ServerMessageType.UserMessage, {
-				username: ws.data.user.username!,
-				message: message.data.message,
-			}),
-		);
-
 		// Make a word if possible
 		const words = message.data.message.split(" ");
-		if (words.length > 1) return;
+		if (words.length > 1) {
+			this.broadcastChatMessage(server, ws, message);
+			return;
+		}
 
 		const attemptedWord = words[0].toLowerCase();
 
-		if (!/^[a-zA-Z]+$/.test(attemptedWord)) return;
-
-		const room = this.rooms[ws.data.roomCode];
+		if (!/^[a-zA-Z]+$/.test(attemptedWord)) {
+			this.broadcastChatMessage(server, ws, message);
+			return;
+		}
 
 		const word = this.tryMakeWord(ws, attemptedWord);
-		if (!word) return;
+		if (!word) {
+			this.broadcastChatMessage(server, ws, message);
+			return;
+		}
 
 		this.removePoolLetters(server, ws, word);
 
 		if (word.userId === ws.data.user.id) {
 			this.updateExistingWord(server, ws, word);
+			server.publish(
+				ws.data.roomCode!,
+				this.createResponse(ServerMessageType.SystemMessage, {
+					type: SystemMessageType.WordUpdated,
+					data: {
+						username: ws.data.user.username!,
+						oldWord: word.existingWord,
+						newWord: word.word,
+					},
+				}),
+			);
 		} else if (word.userId === null) {
 			this.createNewWord(server, ws, word);
+			server.publish(
+				ws.data.roomCode!,
+				this.createResponse(ServerMessageType.SystemMessage, {
+					type: SystemMessageType.WordAdded,
+					data: {
+						username: ws.data.user.username!,
+						word: word.word,
+					},
+				}),
+			);
 		} else {
 			this.stealWord(server, ws, word);
+			server.publish(
+				ws.data.roomCode!,
+				this.createResponse(ServerMessageType.SystemMessage, {
+					type: SystemMessageType.WordStolen,
+					data: {
+						oldUsername:
+							this.rooms[ws.data.roomCode].connectedUsers[word.userId].data.user.username!,
+						newUsername: ws.data.user.username!,
+						oldWord: word.existingWord,
+						newWord: word.word,
+					},
+				}),
+			);
 		}
 
 		this.setTurn(server, ws.data.roomCode, ws.data.user.id);

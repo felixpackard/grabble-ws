@@ -22,10 +22,18 @@ export enum ServerMessageType {
 	TileAdded,
 	TilesRemoved,
 	SetCurrentTurn,
+	SystemMessage,
+}
+
+export enum SystemMessageType {
+	WordAdded,
+	WordUpdated,
+	WordStolen,
 }
 
 type Client<T extends ClientMessageType, J extends object = {}> = { type: T; data: J };
 type Server<T extends ServerMessageType, J extends object = {}> = { type: T; data: J };
+type System<T extends SystemMessageType, J extends object = {}> = { type: T; data: J };
 
 /* prettier-ignore */ export type CreateRoomMessage = Client<ClientMessageType.CreateRoom, { username: string }>;
 /* prettier-ignore */ export type JoinRoomMessage = Client<ClientMessageType.JoinRoom, { roomCode: string, username: string }>;
@@ -46,6 +54,11 @@ type Server<T extends ServerMessageType, J extends object = {}> = { type: T; dat
 /* prettier-ignore */ export type TileAddedMessage = Server<ServerMessageType.TileAdded, { letter: string }>;
 /* prettier-ignore */ export type TilesRemovedMessage = Server<ServerMessageType.TilesRemoved, { letters: string[] }>;
 /* prettier-ignore */ export type SetCurrentTurnMessage = Server<ServerMessageType.SetCurrentTurn, { userId: string }>;
+/* prettier-ignore */ export type SystemMessageMessage = Server<ServerMessageType.SystemMessage, SystemMessage>;
+
+/* prettier-ignore */ export type SystemWordAddedData = System<SystemMessageType.WordAdded, { username: string, word: string }>;
+/* prettier-ignore */ export type SystemWordUpdatedData = System<SystemMessageType.WordUpdated, { username: string, oldWord: string, newWord: string }>;
+/* prettier-ignore */ export type SystemWordStolenData = System<SystemMessageType.WordStolen, { oldUsername: string, newUsername: string, oldWord: string, newWord: string }>;
 
 export type ClientMessage =
 	| CreateRoomMessage
@@ -67,7 +80,10 @@ export type ServerMessage =
 	| UserWordUpdatedMessage
 	| TileAddedMessage
 	| TilesRemovedMessage
-	| SetCurrentTurnMessage;
+	| SetCurrentTurnMessage
+	| SystemMessageMessage;
+
+export type SystemMessage = SystemWordAddedData | SystemWordUpdatedData | SystemWordStolenData;
 
 export type ServerMessageDataType<T extends ServerMessageType> = Extract<
 	ServerMessage,

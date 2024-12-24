@@ -1,6 +1,6 @@
 import { shuffle } from "lodash";
-import { ClientMessageType, ServerMessageType, type ClientMessageDataType, type RoomInfoMessage, type ServerMessage, type SetCurrentTurnMessage, type SetIdMessage, type TileAddedMessage, type TilesRemovedMessage, type UserJoinedMessage, type UserLeftMessage, type UserMessageMessage, type UserWordAddedMessage, type UserWordRemovedMessage, type UserWordUpdatedMessage } from "shared/types/message";
-import type { User, UserMessage } from "shared/types/user";
+import { ClientMessageType, ServerMessageType, SystemMessageType, type ClientMessageDataType, type RoomInfoMessage, type ServerMessage, type SetCurrentTurnMessage, type SetIdMessage, type SystemMessage, type SystemMessageMessage, type TileAddedMessage, type TilesRemovedMessage, type UserJoinedMessage, type UserLeftMessage, type UserMessageMessage, type UserWordAddedMessage, type UserWordRemovedMessage, type UserWordUpdatedMessage } from "shared/types/message";
+import { MessageType, type ChatMessage, type User, type UserMessage } from "shared/types/user";
 import { toast } from "svelte-sonner";
 
 export enum SocketState {
@@ -30,7 +30,7 @@ export class WebSocketClient {
   private gameStarted = $state(false);
   private connectedUsers: Record<string, User> = $state({});
   private turnOrderIds: string[] = $state([]);
-  private userMessages: UserMessage[] = $state([]);
+  private chatMessages: ChatMessage[] = $state([]);
   private availableTiles: string[] = $state([]);
   private currentTurnId: string | null = $state(null);
 
@@ -66,7 +66,7 @@ export class WebSocketClient {
     this.userId = null;
     this.roomCode = null;
     this.connectedUsers = {};
-    this.userMessages = [];
+    this.chatMessages = [];
 
     return ws;
   }
@@ -115,7 +115,10 @@ export class WebSocketClient {
   }
 
   private handleUserMessage(message: UserMessageMessage) {
-    this.userMessages.push(message.data);
+    this.chatMessages.push({
+      type: MessageType.User,
+      data: message.data
+    });
   }
 
   private handleUserWordAdded(message: UserWordAddedMessage) {
@@ -145,6 +148,21 @@ export class WebSocketClient {
 
   private handleSetCurrentTurn(message: SetCurrentTurnMessage) {
     this.currentTurnId = message.data.userId;
+  }
+
+  private handleSystemMessage(message: SystemMessageMessage) {
+    switch (message.data.type) {
+      case SystemMessageType.WordAdded:
+      case SystemMessageType.WordUpdated:
+      case SystemMessageType.WordStolen:
+        this.chatMessages.push({
+          type: MessageType.System,
+          data: message.data,
+        });
+        break;
+      default:
+        console.warn(`Unhandled system message type: ${(message.data as any).type}`);
+    }
   }
 
   private onMessage(event: MessageEvent) {
@@ -189,6 +207,9 @@ export class WebSocketClient {
         case ServerMessageType.SetCurrentTurn:
           this.handleSetCurrentTurn(messageData);
           break;
+        case ServerMessageType.SystemMessage:
+          this.handleSystemMessage(messageData);
+          break;
         default:
           console.warn(`Unhandled message type: ${(messageData as any).type}`);
       }
@@ -232,7 +253,7 @@ export class WebSocketClient {
   }
 
   public getUserMessages() {
-    return this.userMessages;
+    return this.chatMessages;
   }
 
   public getTiles() {
