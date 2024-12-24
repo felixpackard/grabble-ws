@@ -12,40 +12,50 @@ import { randomUUIDv7, type Server, type ServerWebSocket } from "bun";
 import { customAlphabet } from "nanoid";
 import type { WebSocketData } from "shared/types/websocket";
 import { mapValues, sample, shuffle } from "lodash";
+import { getPossibleWords, letterCountToLetters, type Word } from "./anagrams";
+import { Trie } from "./trie";
+import { resolve } from "path";
+import { scoreDiff, scoreWord } from "./score";
 
 const repeat = (letter: string, count: number) => new Array(count).fill(letter);
 
 const SCRABBLE_TILES = [
-	...repeat("A", 9),
-	...repeat("B", 2),
-	...repeat("C", 2),
-	...repeat("D", 4),
-	...repeat("E", 12),
-	...repeat("F", 2),
-	...repeat("G", 3),
-	...repeat("H", 2),
-	...repeat("I", 9),
-	...repeat("J", 1),
-	...repeat("K", 1),
-	...repeat("L", 4),
-	...repeat("M", 2),
-	...repeat("N", 6),
-	...repeat("O", 8),
-	...repeat("P", 2),
-	...repeat("Q", 1),
-	...repeat("R", 6),
-	...repeat("S", 4),
-	...repeat("T", 6),
-	...repeat("U", 4),
-	...repeat("V", 2),
-	...repeat("W", 2),
-	...repeat("X", 1),
-	...repeat("Y", 2),
-	...repeat("Z", 1),
+	...repeat("a", 9),
+	...repeat("b", 2),
+	...repeat("c", 2),
+	...repeat("d", 4),
+	...repeat("e", 12),
+	...repeat("f", 2),
+	...repeat("g", 3),
+	...repeat("h", 2),
+	...repeat("i", 9),
+	...repeat("j", 1),
+	...repeat("k", 1),
+	...repeat("l", 4),
+	...repeat("m", 2),
+	...repeat("n", 6),
+	...repeat("o", 8),
+	...repeat("p", 2),
+	...repeat("q", 1),
+	...repeat("r", 6),
+	...repeat("s", 4),
+	...repeat("t", 6),
+	...repeat("u", 4),
+	...repeat("v", 2),
+	...repeat("w", 2),
+	...repeat("x", 1),
+	...repeat("y", 2),
+	...repeat("z", 1),
 ];
 
 export class MessageHandler {
+	private readonly trie: Trie;
 	private rooms: Record<string, Room> = {};
+
+	constructor() {
+		this.trie = new Trie();
+		this.trie.loadFromFile(resolve(__dirname, "..", "..", "wordlists", "sowpods.txt"));
+	}
 
 	private createResponse<T extends ServerMessageType>(
 		type: T,
@@ -253,6 +263,101 @@ export class MessageHandler {
 		server.publish(ws.data.roomCode, this.createRoomInfoResponse(ws.data.roomCode));
 	}
 
+	private tryMakeWord(ws: ServerWebSocket<WebSocketData>, word: string) {
+		const room = this.rooms[ws.data.roomCode!];
+
+		const poolLetters = room.availableTiles;
+		const existingWordsByUserId = mapValues(
+			room.connectedUsers,
+			(socket) => socket.data.user.words,
+		);
+
+		const possibleWords = getPossibleWords(this.trie, poolLetters, existingWordsByUserId);
+
+		const scoredWords = possibleWords
+			.filter((w) => w.word === word)
+			.map((w) => {
+				return {
+					word: w,
+					score:
+						w.userId === ws.data.user.id ? scoreDiff(w.existingWord, w.word) : scoreWord(w.word),
+				};
+			});
+
+		if (scoredWords.length === 0) return null;
+
+		return scoredWords.reduce((a, b) => (a.score > b.score ? a : b)).word;
+	}
+
+	private removePoolLetters(server: Server, ws: ServerWebSocket<WebSocketData>, word: Word) {
+		const room = this.rooms[ws.data.roomCode!];
+
+		for (const letter of letterCountToLetters(word.poolLetters)) {
+			const index = room.availableTiles.indexOf(letter);
+			room.availableTiles.splice(index, 1);
+		}
+
+		server.publish(
+			ws.data.roomCode!,
+			this.createResponse(ServerMessageType.TilesRemoved, {
+				letters: letterCountToLetters(word.poolLetters),
+			}),
+		);
+	}
+
+	private updateExistingWord(server: Server, ws: ServerWebSocket<WebSocketData>, word: Word) {
+		const room = this.rooms[ws.data.roomCode!];
+
+		const index = ws.data.user.words.indexOf(word.existingWord);
+		ws.data.user.words[index] = word.word;
+
+		server.publish(
+			ws.data.roomCode!,
+			this.createResponse(ServerMessageType.UserWordUpdated, {
+				userId: ws.data.user.id,
+				oldWord: word.existingWord,
+				newWord: word.word,
+			}),
+		);
+	}
+
+	private createNewWord(server: Server, ws: ServerWebSocket<WebSocketData>, word: Word) {
+		ws.data.user.words.push(word.word);
+
+		server.publish(
+			ws.data.roomCode!,
+			this.createResponse(ServerMessageType.UserWordAdded, {
+				userId: ws.data.user.id,
+				word: word.word,
+			}),
+		);
+	}
+
+	private stealWord(server: Server, ws: ServerWebSocket<WebSocketData>, word: Word) {
+		const room = this.rooms[ws.data.roomCode!];
+
+		const index = room.connectedUsers[word.userId!].data.user.words.indexOf(word.existingWord);
+		room.connectedUsers[word.userId!].data.user.words.splice(index, 1);
+
+		ws.data.user.words.push(word.word);
+
+		server.publish(
+			ws.data.roomCode!,
+			this.createResponse(ServerMessageType.UserWordRemoved, {
+				userId: word.userId!,
+				word: word.existingWord,
+			}),
+		);
+
+		server.publish(
+			ws.data.roomCode!,
+			this.createResponse(ServerMessageType.UserWordAdded, {
+				userId: ws.data.user.id,
+				word: word.word,
+			}),
+		);
+	}
+
 	private handleMessage(
 		server: Server,
 		ws: ServerWebSocket<WebSocketData>,
@@ -267,6 +372,31 @@ export class MessageHandler {
 				message: message.data.message,
 			}),
 		);
+
+		// Make a word if possible
+		const words = message.data.message.split(" ");
+		if (words.length > 1) return;
+
+		const attemptedWord = words[0].toLowerCase();
+
+		if (!/^[a-zA-Z]+$/.test(attemptedWord)) return;
+
+		const room = this.rooms[ws.data.roomCode];
+
+		const word = this.tryMakeWord(ws, attemptedWord);
+		if (!word) return;
+
+		this.removePoolLetters(server, ws, word);
+
+		if (word.userId === ws.data.user.id) {
+			this.updateExistingWord(server, ws, word);
+		} else if (word.userId === null) {
+			this.createNewWord(server, ws, word);
+		} else {
+			this.stealWord(server, ws, word);
+		}
+
+		this.setTurn(server, ws.data.roomCode, ws.data.user.id);
 	}
 
 	private handleTurnTile(server: Server, ws: ServerWebSocket<WebSocketData>): void {
@@ -278,6 +408,8 @@ export class MessageHandler {
 		}
 
 		const letter = this.rooms[ws.data.roomCode].hiddenTiles.pop()!;
+
+		this.rooms[ws.data.roomCode].availableTiles.push(letter);
 
 		server.publish(
 			ws.data.roomCode,

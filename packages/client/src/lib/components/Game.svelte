@@ -1,30 +1,36 @@
 <script lang="ts">
 	import { WebSocketClient } from "$lib/websocket.svelte";
 	import Chat from "./Chat.svelte";
+	import Lobby from "./Lobby.svelte";
 	import Tiles from "./Tiles.svelte";
+	import Words from "./Words.svelte";
 
   let { client } : { client: WebSocketClient | null } = $props();
 
-  let users = $derived(client?.getTurnOrderIds().map((id) => client?.getUser(id) ?? {}) ?? []);
+  let playingUser = $derived(client?.getUser(client?.getCurrentTurnId() ?? "") ?? null);
+
+  let lastOpponentPlayingId: string | null = $state(null);
+
+  $effect(() => {
+    let currentTurnId = client?.getCurrentTurnId();
+    if (currentTurnId && currentTurnId !== client?.getUserId()) {
+      lastOpponentPlayingId = currentTurnId;
+    }
+  });
 </script>
 
 <div class="flex p-4 gap-4 h-svh">
   {#if client?.isGameRunning()}
-    <div class="flex-1 flex flex-col justify-center">
+    <div class="flex-1 flex flex-col justify-between">
+      <div class="flex flex-col gap-2">
+        <div>It's <span class="font-bold">{playingUser?.username}</span>'s turn</div>
+        <Words {client} userId={lastOpponentPlayingId} />
+      </div>
       <Tiles {client} />
+      <Words {client} userId={client?.getUserId()} />
     </div>
   {:else}
-    <div class="flex-1 flex items-center justify-center">
-      <div class="flex p-4 flex-col gap-2 max-w-md w-full border-2 border-gray-300 rounded-lg shadow-md">
-        <h1 class="font-bold">{users.length > 1 ? "Ready to Start" : "Waiting for players..."}</h1>
-        <ul class="list-disc list-inside">
-          {#each users as user}
-            <li>{user.username}{user.id === client?.getHostId() ? " (host)" : ""}</li>
-          {/each}
-        </ul>
-        <button disabled={users.length <= 1 || !client?.isHost()} onclick={() => client?.startGame()}>Start Game [{users.length} player{users.length > 1 ? "s" : ""}]</button>
-      </div>
-    </div>
+    <Lobby {client} />
   {/if}
   <div class="w-[300px]">
     <Chat {client} />
