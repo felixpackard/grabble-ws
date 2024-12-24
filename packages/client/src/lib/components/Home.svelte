@@ -16,7 +16,7 @@
     client?.joinRoom(roomCode, username);
   }
 
-  function getStateColor() {
+  const stateColor = $derived(() => {
     switch (client?.getState()) {
       case SocketState.Connected:
         return "bg-green-500";
@@ -25,12 +25,12 @@
       case SocketState.Disconnected:
         return "bg-red-500";
     }
-  }
+  });
 </script>
 
 <div class="flex items-center justify-center h-svh w-screen">
   <div class="fixed top-4 left-4 flex gap-2 items-center text-sm">
-    <div class="rounded-full size-3 {getStateColor()}"></div>
+    <div class="rounded-full size-3 {stateColor}"></div>
     <span>{SocketStateLabel.get(client?.getState() ?? SocketState.Disconnected)}</span>
   </div>
   <div class="flex p-4 flex-col gap-2 max-w-md border-2 border-gray-300 rounded-lg shadow-md">

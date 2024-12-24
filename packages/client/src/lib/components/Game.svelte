@@ -17,13 +17,18 @@
       lastOpponentPlayingId = currentTurnId;
     }
   });
+
+  const stateColor = $derived(client?.isCurrentTurn() ? "bg-green-500" : "bg-orange-500");
 </script>
 
 <div class="flex p-4 gap-4 h-svh">
   {#if client?.isGameRunning()}
     <div class="flex-1 flex flex-col justify-between">
       <div class="flex flex-col gap-2">
-        <div>It's <span class="font-bold">{playingUser?.username}</span>'s turn</div>
+        <div class="flex items-center gap-2 text-sm">
+          <div class="rounded-full size-3 {stateColor}"></div>
+          <div>It's <span class="font-bold">{playingUser?.username}</span>'s turn</div>
+        </div>
         <Words {client} userId={lastOpponentPlayingId} />
       </div>
       <Tiles {client} />
