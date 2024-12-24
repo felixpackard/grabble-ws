@@ -2,8 +2,26 @@
   import { WebSocketClient } from "$lib/websocket.svelte";
 	import { Eye, Shuffle } from "lucide-svelte";
 	import Tile from "./Tile.svelte";
+	import { onMount } from "svelte";
 
   let { client } : { client: WebSocketClient | null } = $props();
+
+  onMount(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Tab") {
+        event.preventDefault();
+        if (client?.isCurrentTurn()) {
+          client?.turnTile();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+
+    return () => {
+      window.removeEventListener("keydown", handler);
+    };
+  });
 </script>
 
 <div class="flex justify-between items-center gap-2">
