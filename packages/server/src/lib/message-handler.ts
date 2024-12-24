@@ -1,0 +1,336 @@
+import {
+	type ClientMessage,
+	ClientMessageType,
+	type CreateRoomMessage,
+	type JoinRoomMessage,
+	type SendMessageMessage,
+	type ServerMessageDataType,
+	ServerMessageType,
+} from "shared/types/message";
+import type { Room } from "shared/types/room";
+import { randomUUIDv7, type Server, type ServerWebSocket } from "bun";
+import { customAlphabet } from "nanoid";
+import type { WebSocketData } from "shared/types/websocket";
+import { mapValues, sample, shuffle } from "lodash";
+
+const repeat = (letter: string, count: number) => new Array(count).fill(letter);
+
+const SCRABBLE_TILES = [
+	...repeat("A", 9),
+	...repeat("B", 2),
+	...repeat("C", 2),
+	...repeat("D", 4),
+	...repeat("E", 12),
+	...repeat("F", 2),
+	...repeat("G", 3),
+	...repeat("H", 2),
+	...repeat("I", 9),
+	...repeat("J", 1),
+	...repeat("K", 1),
+	...repeat("L", 4),
+	...repeat("M", 2),
+	...repeat("N", 6),
+	...repeat("O", 8),
+	...repeat("P", 2),
+	...repeat("Q", 1),
+	...repeat("R", 6),
+	...repeat("S", 4),
+	...repeat("T", 6),
+	...repeat("U", 4),
+	...repeat("V", 2),
+	...repeat("W", 2),
+	...repeat("X", 1),
+	...repeat("Y", 2),
+	...repeat("Z", 1),
+];
+
+export class MessageHandler {
+	private rooms: Record<string, Room> = {};
+
+	private createResponse<T extends ServerMessageType>(
+		type: T,
+		data: ServerMessageDataType<T>,
+	): string {
+		return JSON.stringify({ type, data });
+	}
+
+	private createRoomInfoResponse(roomCode: string): string {
+		return this.createResponse(ServerMessageType.RoomInfo, {
+			roomCode: roomCode,
+			hostId: this.rooms[roomCode].hostId,
+			gameStarted: this.rooms[roomCode].gameStarted,
+			currentTurnId: this.rooms[roomCode].currentTurnId,
+			connectedUsers: mapValues(this.rooms[roomCode].connectedUsers, (socket) => socket.data.user),
+			turnOrderIds: this.rooms[roomCode].turnOrderIds,
+			availableTiles: this.rooms[roomCode].availableTiles,
+		});
+	}
+
+	private assertInRoom(
+		ws: ServerWebSocket<WebSocketData>,
+	): asserts ws is ServerWebSocket<WebSocketData & { roomCode: string }> {
+		if (!ws.data.roomCode) {
+			throw new Error("Not in a room");
+		}
+	}
+
+	private generateRoomCode(): string {
+		let attempts = 0;
+		let length = 4;
+		let roomCode = "";
+
+		const existingRoomCodes = Object.values(this.rooms).map((room) => room.id);
+
+		do {
+			roomCode = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ", length)();
+			if (++attempts > 10) {
+				length++;
+				attempts = 0;
+			}
+		} while (existingRoomCodes.some((code) => code === roomCode));
+
+		return roomCode;
+	}
+
+	private nextTurn(server: Server, roomCode: string) {
+		const currentTurnIndex = this.rooms[roomCode].turnOrderIds.indexOf(
+			this.rooms[roomCode].currentTurnId!,
+		);
+
+		const nextTurnIndex =
+			currentTurnIndex === this.rooms[roomCode].turnOrderIds.length - 1 ? 0 : currentTurnIndex + 1;
+
+		this.rooms[roomCode].currentTurnId = this.rooms[roomCode].turnOrderIds[nextTurnIndex];
+
+		server.publish(
+			roomCode,
+			this.createResponse(ServerMessageType.SetCurrentTurn, {
+				userId: this.rooms[roomCode].currentTurnId!,
+			}),
+		);
+	}
+
+	private setTurn(server: Server, roomCode: string, userId: string) {
+		this.rooms[roomCode].currentTurnId = userId;
+
+		server.publish(
+			roomCode,
+			this.createResponse(ServerMessageType.SetCurrentTurn, {
+				userId,
+			}),
+		);
+	}
+
+	private handleCreateRoom(ws: ServerWebSocket<WebSocketData>, message: CreateRoomMessage): void {
+		if (ws.data.roomCode) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Already in a room" }));
+			return;
+		}
+
+		ws.data.user.username = message.data.username;
+
+		// Create the room
+		const roomCode = this.generateRoomCode();
+		ws.data.roomCode = roomCode;
+		this.rooms[roomCode] = {
+			id: roomCode,
+			hostId: ws.data.user.id,
+			gameStarted: false,
+			currentTurnId: null,
+			connectedUsers: {
+				[ws.data.user.id]: ws,
+			},
+			turnOrderIds: [ws.data.user.id],
+			availableTiles: [],
+			hiddenTiles: shuffle(SCRABBLE_TILES),
+		};
+
+		// Subscribe to the room
+		ws.subscribe(ws.data.roomCode);
+
+		// Notify the user
+		ws.send(this.createRoomInfoResponse(roomCode));
+	}
+
+	private handleJoinRoom(
+		server: Server,
+		ws: ServerWebSocket<WebSocketData>,
+		message: JoinRoomMessage,
+	): void {
+		if (!message.data.username) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Username not set" }));
+			return;
+		}
+
+		if (ws.data.roomCode) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Already in a room" }));
+			return;
+		}
+
+		if (!this.rooms[message.data.roomCode]) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Room not found" }));
+			return;
+		}
+
+		if (
+			Object.values(this.rooms[message.data.roomCode].connectedUsers).some(
+				(socket) => socket.data.user.username === message.data.username,
+			)
+		) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Username already taken" }));
+			return;
+		}
+
+		ws.data.roomCode = message.data.roomCode;
+		ws.data.user.username = message.data.username;
+
+		// Add user to room
+		this.rooms[ws.data.roomCode].connectedUsers[ws.data.user.id] = ws;
+		this.rooms[ws.data.roomCode].turnOrderIds.push(ws.data.user.id);
+
+		// Subscribe to the room
+		ws.subscribe(ws.data.roomCode);
+
+		// Send room info to the new user
+		ws.send(this.createRoomInfoResponse(ws.data.roomCode));
+
+		// Notify all other users in the room
+		ws.publish(
+			ws.data.roomCode,
+			this.createResponse(ServerMessageType.UserJoined, {
+				userId: ws.data.user.id,
+				user: ws.data.user,
+			}),
+		);
+	}
+
+	private handleLeaveRoom(server: Server, ws: ServerWebSocket<WebSocketData>): void {
+		if (!ws.data.roomCode) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Not in a room" }));
+			return;
+		}
+
+		// Remove user from room
+		delete this.rooms[ws.data.roomCode].connectedUsers[ws.data.user.id];
+		this.rooms[ws.data.roomCode].turnOrderIds = this.rooms[ws.data.roomCode].turnOrderIds.filter(
+			(id) => id !== ws.data.user.id,
+		);
+
+		// Unsubscribe from the room
+		ws.unsubscribe(ws.data.roomCode);
+
+		if (Object.keys(this.rooms[ws.data.roomCode].connectedUsers).length === 0) {
+			delete this.rooms[ws.data.roomCode];
+		} else {
+			// Notify all users in the room
+			server.publish(
+				ws.data.roomCode,
+				this.createResponse(ServerMessageType.UserLeft, { userId: ws.data.user.id }),
+			);
+		}
+
+		ws.data.roomCode = null;
+		ws.data.user.username = null;
+		ws.data.user.words = [];
+	}
+
+	private handleStartGame(server: Server, ws: ServerWebSocket<WebSocketData>): void {
+		this.assertInRoom(ws);
+
+		if (this.rooms[ws.data.roomCode].gameStarted) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Game already started" }));
+			return;
+		}
+
+		this.rooms[ws.data.roomCode] = {
+			...this.rooms[ws.data.roomCode],
+			gameStarted: true,
+			availableTiles: [],
+			hiddenTiles: shuffle(SCRABBLE_TILES),
+			currentTurnId: sample(Object.keys(this.rooms[ws.data.roomCode].connectedUsers))!,
+		};
+
+		server.publish(ws.data.roomCode, this.createRoomInfoResponse(ws.data.roomCode));
+	}
+
+	private handleMessage(
+		server: Server,
+		ws: ServerWebSocket<WebSocketData>,
+		message: SendMessageMessage,
+	): void {
+		this.assertInRoom(ws);
+
+		server.publish(
+			ws.data.roomCode,
+			this.createResponse(ServerMessageType.UserMessage, {
+				username: ws.data.user.username!,
+				message: message.data.message,
+			}),
+		);
+	}
+
+	private handleTurnTile(server: Server, ws: ServerWebSocket<WebSocketData>): void {
+		this.assertInRoom(ws);
+
+		if (this.rooms[ws.data.roomCode].hiddenTiles.length === 0) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "No more tiles" }));
+			return;
+		}
+
+		const letter = this.rooms[ws.data.roomCode].hiddenTiles.pop()!;
+
+		server.publish(
+			ws.data.roomCode,
+			this.createResponse(ServerMessageType.TileAdded, {
+				letter,
+			}),
+		);
+
+		this.nextTurn(server, ws.data.roomCode);
+	}
+
+	public onOpen(ws: ServerWebSocket<WebSocketData>): void {
+		ws.data = { roomCode: null, user: { id: randomUUIDv7(), username: null, words: [] } };
+		ws.send(this.createResponse(ServerMessageType.SetId, { id: ws.data.user.id }));
+	}
+
+	public onClose(server: Server, ws: ServerWebSocket<WebSocketData>): void {
+		if (ws.data.roomCode) {
+			this.handleLeaveRoom(server, ws);
+		}
+	}
+
+	public onMessage(server: Server, ws: ServerWebSocket<WebSocketData>, message: string): void {
+		try {
+			const messageData = JSON.parse(message) as ClientMessage;
+
+			switch (messageData.type) {
+				case ClientMessageType.CreateRoom:
+					this.handleCreateRoom(ws, messageData);
+					break;
+				case ClientMessageType.JoinRoom:
+					this.handleJoinRoom(server, ws, messageData);
+					break;
+				case ClientMessageType.LeaveRoom:
+					this.handleLeaveRoom(server, ws);
+					break;
+				case ClientMessageType.StartGame:
+					this.handleStartGame(server, ws);
+					break;
+				case ClientMessageType.SendMessage:
+					this.handleMessage(server, ws, messageData);
+					break;
+				case ClientMessageType.TurnTile:
+					this.handleTurnTile(server, ws);
+					break;
+				default:
+					console.warn(`Unhandled message type: ${(messageData as any).type}`);
+			}
+		} catch (error) {
+			console.error("Error handling WebSocket message:", error);
+			ws.send(
+				this.createResponse(ServerMessageType.Error, { message: "Failed to process message" }),
+			);
+		}
+	}
+}
