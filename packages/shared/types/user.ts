@@ -4,6 +4,7 @@ export type User = {
 	id: string;
 	username: string | null;
 	words: string[];
+	readyToEnd: boolean;
 };
 
 export enum MessageType {
@@ -25,3 +26,8 @@ export type ChatMessage =
 			type: MessageType.System;
 			data: SystemMessage;
 	  };
+
+export type UserScore = {
+	username: string;
+	score: number;
+};

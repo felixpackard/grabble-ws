@@ -16,6 +16,7 @@
 		"lodash": "^4.17.21",
 		"lucide-svelte": "^0.469.0",
 		"shared": "workspace:*",
+		"svelte-canvas-confetti": "^0.6.0",
 		"svelte-sonner": "^0.3.28"
 	},
 	"devDependencies": {

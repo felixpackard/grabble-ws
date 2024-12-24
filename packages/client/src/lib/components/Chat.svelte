@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { WebSocketClient } from "$lib/websocket.svelte";
-  import { CirclePlus, Replace, Send, Swords } from "lucide-svelte";
+  import { CirclePlus, ClockAlert, Replace, Send, Swords } from "lucide-svelte";
 	import { SystemMessageType } from "shared/types/message";
 	import { MessageType } from "shared/types/user";
-	import { onMount, tick } from "svelte";
+	import { onMount } from "svelte";
 
   let message = $state("");
 
@@ -56,6 +56,7 @@
             {#if message.data.type === SystemMessageType.WordAdded}<CirclePlus class="size-5 inline-block text-green-600" /> <span class="font-bold">{message.data.data.username}</span> made <span class="font-bold uppercase">{message.data.data.word}</span>{/if}
             {#if message.data.type === SystemMessageType.WordUpdated}<Replace class="size-5 inline-block text-yellow-600" /> <span class="font-bold">{message.data.data.username}</span> made <span class="font-bold uppercase">{message.data.data.newWord}</span> from <span class="font-bold uppercase">{message.data.data.oldWord}</span>{/if}
             {#if message.data.type === SystemMessageType.WordStolen}<Swords class="size-5 inline-block text-red-600" /> <span class="font-bold">{message.data.data.newUsername}</span> made <span class="font-bold uppercase">{message.data.data.newWord}</span> from <span class="font-bold uppercase">{message.data.data.oldUsername}</span>'s <span class="font-bold uppercase">{message.data.data.oldWord}</span>{/if}
+            {#if message.data.type === SystemMessageType.NoTilesRemaining}<ClockAlert class="size-5 inline-block text-red-600" /> No tiles remaining!{/if}
           {/if}
         </div>
       {/each}

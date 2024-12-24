@@ -1,6 +1,6 @@
 import { shuffle } from "lodash";
-import { ClientMessageType, ServerMessageType, SystemMessageType, type ClientMessageDataType, type RoomInfoMessage, type ServerMessage, type SetCurrentTurnMessage, type SetIdMessage, type SystemMessage, type SystemMessageMessage, type TileAddedMessage, type TilesRemovedMessage, type UserJoinedMessage, type UserLeftMessage, type UserMessageMessage, type UserWordAddedMessage, type UserWordRemovedMessage, type UserWordUpdatedMessage } from "shared/types/message";
-import { MessageType, type ChatMessage, type User, type UserMessage } from "shared/types/user";
+import { ClientMessageType, ServerMessageType, SystemMessageType, type ClientMessageDataType, type GameEndedMessage, type RoomInfoMessage, type ServerMessage, type SetCurrentTurnMessage, type SetIdMessage, type SystemMessage, type SystemMessageMessage, type TileAddedMessage, type TilesRemovedMessage, type UserJoinedMessage, type UserLeftMessage, type UserMessageMessage, type UserToggledReadyToEndMessage, type UserWordAddedMessage, type UserWordRemovedMessage, type UserWordUpdatedMessage } from "shared/types/message";
+import { MessageType, type ChatMessage, type User, type UserMessage, type UserScore } from "shared/types/user";
 import { toast } from "svelte-sonner";
 
 export enum SocketState {
@@ -32,7 +32,11 @@ export class WebSocketClient {
   private turnOrderIds: string[] = $state([]);
   private chatMessages: ChatMessage[] = $state([]);
   private availableTiles: string[] = $state([]);
+  private remainingTileCount = $state(0);
   private currentTurnId: string | null = $state(null);
+  private readyToEnd: boolean = $state(false);
+  private gameEnded: boolean = $state(false);
+  private finalScores: UserScore[] = $state([]);
 
   constructor() {
     this.ws = this.createSocket();
@@ -102,6 +106,10 @@ export class WebSocketClient {
     this.connectedUsers = message.data.connectedUsers;
     this.turnOrderIds = message.data.turnOrderIds;
     this.availableTiles = message.data.availableTiles;
+    this.remainingTileCount = message.data.remainingTileCount;
+    
+    this.readyToEnd = false;
+    this.gameEnded = false;
   }
 
   private handleUserJoined(message: UserJoinedMessage) {
@@ -137,6 +145,7 @@ export class WebSocketClient {
 
   private handleTileAdded(message: TileAddedMessage) {
     this.availableTiles.push(message.data.letter);
+    this.remainingTileCount--;
   }
 
   private handleTilesRemoved(message: TilesRemovedMessage) {
@@ -155,6 +164,7 @@ export class WebSocketClient {
       case SystemMessageType.WordAdded:
       case SystemMessageType.WordUpdated:
       case SystemMessageType.WordStolen:
+      case SystemMessageType.NoTilesRemaining:
         this.chatMessages.push({
           type: MessageType.System,
           data: message.data,
@@ -163,6 +173,18 @@ export class WebSocketClient {
       default:
         console.warn(`Unhandled system message type: ${(message.data as any).type}`);
     }
+  }
+
+  private handleUserToggledReadyToEnd(message: UserToggledReadyToEndMessage) {
+    this.connectedUsers[message.data.userId].readyToEnd = message.data.readyToEnd;
+    if (message.data.userId === this.userId) {
+      this.readyToEnd = message.data.readyToEnd;
+    }
+  }
+
+  private handleGameEnded(message: GameEndedMessage) {
+    this.gameEnded = true;
+    this.finalScores = message.data.finalScores;
   }
 
   private onMessage(event: MessageEvent) {
@@ -209,6 +231,12 @@ export class WebSocketClient {
           break;
         case ServerMessageType.SystemMessage:
           this.handleSystemMessage(messageData);
+          break;
+        case ServerMessageType.UserToggledReadyToEnd:
+          this.handleUserToggledReadyToEnd(messageData);
+          break;
+        case ServerMessageType.GameEnded:
+          this.handleGameEnded(messageData);
           break;
         default:
           console.warn(`Unhandled message type: ${(messageData as any).type}`);
@@ -284,6 +312,30 @@ export class WebSocketClient {
     return this.hostId;
   }
 
+  public getRemainingTileCount() {
+    return this.remainingTileCount;
+  }
+
+  public getReadyToEndCount() {
+    return Object.values(this.connectedUsers).filter((user) => user.readyToEnd).length;
+  }
+
+  public isGameRunning() {
+    return this.gameStarted;
+  }
+
+  public isReadyToEnd() {
+    return this.readyToEnd;
+  }
+
+  public hasGameEnded() {
+    return this.gameEnded;
+  }
+
+  public getFinalScores() {
+    return this.finalScores;
+  }
+
   /*
    * Helpers
    */
@@ -294,10 +346,6 @@ export class WebSocketClient {
 
   public isCurrentTurn() {
     return this.currentTurnId === this.userId;
-  }
-
-  public isGameRunning() {
-    return this.gameStarted;
   }
 
   /*
@@ -332,5 +380,10 @@ export class WebSocketClient {
   public startGame() {
     this.assertReady();
     this.send(ClientMessageType.StartGame, {});
+  }
+
+  public toggleReadyToEnd() {
+    this.assertReady();
+    this.send(ClientMessageType.ToggleReadyToEnd, {});
   }
 }

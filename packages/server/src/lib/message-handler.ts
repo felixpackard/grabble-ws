@@ -12,7 +12,7 @@ import type { Room } from "shared/types/room";
 import { randomUUIDv7, type Server, type ServerWebSocket } from "bun";
 import { customAlphabet } from "nanoid";
 import type { WebSocketData } from "shared/types/websocket";
-import { mapValues, sample, shuffle } from "lodash";
+import { mapValues, sample, shuffle, values } from "lodash";
 import { getPossibleWords, letterCountToLetters, type Word } from "./anagrams";
 import { Trie } from "./trie";
 import { resolve } from "path";
@@ -74,6 +74,7 @@ export class MessageHandler {
 			connectedUsers: mapValues(this.rooms[roomCode].connectedUsers, (socket) => socket.data.user),
 			turnOrderIds: this.rooms[roomCode].turnOrderIds,
 			availableTiles: this.rooms[roomCode].availableTiles,
+			remainingTileCount: this.rooms[roomCode].hiddenTiles.length,
 		});
 	}
 
@@ -147,6 +148,7 @@ export class MessageHandler {
 			id: roomCode,
 			hostId: ws.data.user.id,
 			gameStarted: false,
+			gameEnded: false,
 			currentTurnId: null,
 			connectedUsers: {
 				[ws.data.user.id]: ws,
@@ -248,18 +250,26 @@ export class MessageHandler {
 	private handleStartGame(server: Server, ws: ServerWebSocket<WebSocketData>): void {
 		this.assertInRoom(ws);
 
-		if (this.rooms[ws.data.roomCode].gameStarted) {
+		let room = this.rooms[ws.data.roomCode];
+
+		if (room.gameStarted && !room.gameEnded) {
 			ws.send(this.createResponse(ServerMessageType.Error, { message: "Game already started" }));
 			return;
 		}
 
 		this.rooms[ws.data.roomCode] = {
-			...this.rooms[ws.data.roomCode],
+			...room,
 			gameStarted: true,
+			gameEnded: false,
 			availableTiles: [],
 			hiddenTiles: shuffle(SCRABBLE_TILES),
-			currentTurnId: sample(Object.keys(this.rooms[ws.data.roomCode].connectedUsers))!,
+			currentTurnId: sample(Object.keys(room.connectedUsers))!,
 		};
+
+		values(room.connectedUsers).forEach((socket) => {
+			socket.data.user.words = [];
+			socket.data.user.readyToEnd = false;
+		});
 
 		server.publish(ws.data.roomCode, this.createRoomInfoResponse(ws.data.roomCode));
 	}
@@ -450,14 +460,16 @@ export class MessageHandler {
 	private handleTurnTile(server: Server, ws: ServerWebSocket<WebSocketData>): void {
 		this.assertInRoom(ws);
 
-		if (this.rooms[ws.data.roomCode].hiddenTiles.length === 0) {
+		const room = this.rooms[ws.data.roomCode];
+
+		if (room.hiddenTiles.length === 0) {
 			ws.send(this.createResponse(ServerMessageType.Error, { message: "No more tiles" }));
 			return;
 		}
 
-		const letter = this.rooms[ws.data.roomCode].hiddenTiles.pop()!;
+		const letter = room.hiddenTiles.pop()!;
 
-		this.rooms[ws.data.roomCode].availableTiles.push(letter);
+		room.availableTiles.push(letter);
 
 		server.publish(
 			ws.data.roomCode,
@@ -467,10 +479,64 @@ export class MessageHandler {
 		);
 
 		this.nextTurn(server, ws.data.roomCode);
+
+		if (room.hiddenTiles.length === 0) {
+			server.publish(
+				ws.data.roomCode,
+				this.createResponse(ServerMessageType.SystemMessage, {
+					type: SystemMessageType.NoTilesRemaining,
+					data: {},
+				}),
+			);
+		}
+	}
+
+	private handleToggleReadyToEnd(server: Server, ws: ServerWebSocket<WebSocketData>): void {
+		this.assertInRoom(ws);
+
+		const room = this.rooms[ws.data.roomCode];
+
+		if (values(room.connectedUsers).every((socket) => socket.data.user.readyToEnd)) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Game already ended" }));
+			return;
+		}
+
+		ws.data.user.readyToEnd = !ws.data.user.readyToEnd;
+
+		server.publish(
+			ws.data.roomCode!,
+			this.createResponse(ServerMessageType.UserToggledReadyToEnd, {
+				userId: ws.data.user.id,
+				readyToEnd: ws.data.user.readyToEnd,
+			}),
+		);
+
+		if (values(room.connectedUsers).every((socket) => socket.data.user.readyToEnd)) {
+			room.gameEnded = true;
+
+			const scores = values(room.connectedUsers)
+				.map((socket) => {
+					return {
+						username: socket.data.user.username!,
+						score: socket.data.user.words.reduce((acc, word) => acc + scoreWord(word), 0),
+					};
+				})
+				.sort((a, b) => b.score - a.score);
+
+			server.publish(
+				ws.data.roomCode!,
+				this.createResponse(ServerMessageType.GameEnded, {
+					finalScores: scores,
+				}),
+			);
+		}
 	}
 
 	public onOpen(ws: ServerWebSocket<WebSocketData>): void {
-		ws.data = { roomCode: null, user: { id: randomUUIDv7(), username: null, words: [] } };
+		ws.data = {
+			roomCode: null,
+			user: { id: randomUUIDv7(), username: null, words: [], readyToEnd: false },
+		};
 		ws.send(this.createResponse(ServerMessageType.SetId, { id: ws.data.user.id }));
 	}
 
@@ -502,6 +568,9 @@ export class MessageHandler {
 					break;
 				case ClientMessageType.TurnTile:
 					this.handleTurnTile(server, ws);
+					break;
+				case ClientMessageType.ToggleReadyToEnd:
+					this.handleToggleReadyToEnd(server, ws);
 					break;
 				default:
 					console.warn(`Unhandled message type: ${(messageData as any).type}`);

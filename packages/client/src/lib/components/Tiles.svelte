@@ -10,7 +10,7 @@
     const handler = (event: KeyboardEvent) => {
       if (event.key === "Tab") {
         event.preventDefault();
-        if (client?.isCurrentTurn()) {
+        if (client?.isCurrentTurn() && client?.getRemainingTileCount() > 0) {
           client?.turnTile();
         }
       }
@@ -31,11 +31,16 @@
     {/each}
   </div>
   <div class="flex flex-col gap-2 shrink-0">
-    <button disabled={!client?.isCurrentTurn()} onclick={() => client?.turnTile()} class="flex items-center justify-center gap-1.5">
+    <button disabled={!client?.isCurrentTurn() || client?.getRemainingTileCount() === 0} onclick={() => client?.turnTile()} class="flex items-center justify-center gap-1.5">
       <Eye class="size-4" /> Turn
     </button>
     <button onclick={() => client?.shuffleTiles()} class="flex items-center justify-center gap-1.5">
       <Shuffle class="size-4" /> Shuffle
     </button>
+    {#if client?.getRemainingTileCount() === 0}
+      <button onclick={() => client?.toggleReadyToEnd()} class="flex items-center justify-center gap-1.5 {client?.isReadyToEnd() && "bg-green-200 text-green-800 hover:bg-green-300 focus:bg-green-300 border-green-800"}">
+        End [{client?.getReadyToEndCount()}/{client?.getTurnOrderIds().length}]
+      </button>
+    {/if}
   </div>
 </div>

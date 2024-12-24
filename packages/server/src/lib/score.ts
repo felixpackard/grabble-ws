@@ -1,5 +1,5 @@
 export function scoreWord(word: string) {
-	return word.length - 1;
+	return word.length - 2;
 }
 
 export function scoreDiff(oldWord: string, newWord: string) {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { WebSocketClient } from "$lib/websocket.svelte";
 	import Chat from "./Chat.svelte";
+	import GameOver from "./GameOver.svelte";
 	import Lobby from "./Lobby.svelte";
 	import Tiles from "./Tiles.svelte";
 	import Words from "./Words.svelte";
@@ -31,7 +32,11 @@
         </div>
         <Words {client} userId={lastOpponentPlayingId} />
       </div>
-      <Tiles {client} />
+      {#if client?.hasGameEnded()}
+        <GameOver {client} />
+      {:else}
+        <Tiles {client} />
+      {/if}
       <Words {client} userId={client?.getUserId()} />
     </div>
   {:else}

@@ -5,6 +5,7 @@ export type Room = {
 	id: string;
 	hostId: string;
 	gameStarted: boolean;
+	gameEnded: boolean;
 	currentTurnId: string | null;
 	connectedUsers: Record<string, ServerWebSocket<WebSocketData>>;
 	turnOrderIds: string[];

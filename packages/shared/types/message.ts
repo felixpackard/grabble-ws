@@ -1,4 +1,4 @@
-import { type User } from "./user";
+import { type User, type UserScore } from "./user";
 
 export enum ClientMessageType {
 	CreateRoom,
@@ -7,6 +7,7 @@ export enum ClientMessageType {
 	StartGame,
 	SendMessage,
 	TurnTile,
+	ToggleReadyToEnd,
 }
 
 export enum ServerMessageType {
@@ -23,12 +24,15 @@ export enum ServerMessageType {
 	TilesRemoved,
 	SetCurrentTurn,
 	SystemMessage,
+	UserToggledReadyToEnd,
+	GameEnded,
 }
 
 export enum SystemMessageType {
 	WordAdded,
 	WordUpdated,
 	WordStolen,
+	NoTilesRemaining,
 }
 
 type Client<T extends ClientMessageType, J extends object = {}> = { type: T; data: J };
@@ -41,10 +45,11 @@ type System<T extends SystemMessageType, J extends object = {}> = { type: T; dat
 /* prettier-ignore */ export type StartGameMessage = Client<ClientMessageType.StartGame>;
 /* prettier-ignore */ export type SendMessageMessage = Client<ClientMessageType.SendMessage, { message: string }>;
 /* prettier-ignore */ export type TurnTileMessage = Client<ClientMessageType.TurnTile>;
+/* prettier-ignore */ export type ToggleReadyToEndMessage = Client<ClientMessageType.ToggleReadyToEnd>;
 
 /* prettier-ignore */ export type ErrorMessage = Server<ServerMessageType.Error, { message: string }>;
 /* prettier-ignore */ export type SetIdMessage = Server<ServerMessageType.SetId, { id: string }>;
-/* prettier-ignore */ export type RoomInfoMessage = Server<ServerMessageType.RoomInfo, { roomCode: string, hostId: string, gameStarted: boolean, currentTurnId: string | null, connectedUsers: Record<string, User>, turnOrderIds: string[], availableTiles: string[] }>;
+/* prettier-ignore */ export type RoomInfoMessage = Server<ServerMessageType.RoomInfo, { roomCode: string, hostId: string, gameStarted: boolean, currentTurnId: string | null, connectedUsers: Record<string, User>, turnOrderIds: string[], availableTiles: string[], remainingTileCount: number }>;
 /* prettier-ignore */ export type UserJoinedMessage = Server<ServerMessageType.UserJoined, { userId: string, user: User }>;
 /* prettier-ignore */ export type UserLeftMessage = Server<ServerMessageType.UserLeft, { userId: string }>;
 /* prettier-ignore */ export type UserMessageMessage = Server<ServerMessageType.UserMessage, { username: string; message: string }>;
@@ -55,10 +60,13 @@ type System<T extends SystemMessageType, J extends object = {}> = { type: T; dat
 /* prettier-ignore */ export type TilesRemovedMessage = Server<ServerMessageType.TilesRemoved, { letters: string[] }>;
 /* prettier-ignore */ export type SetCurrentTurnMessage = Server<ServerMessageType.SetCurrentTurn, { userId: string }>;
 /* prettier-ignore */ export type SystemMessageMessage = Server<ServerMessageType.SystemMessage, SystemMessage>;
+/* prettier-ignore */ export type UserToggledReadyToEndMessage = Server<ServerMessageType.UserToggledReadyToEnd, { userId: string, readyToEnd: boolean }>;
+/* prettier-ignore */ export type GameEndedMessage = Server<ServerMessageType.GameEnded, { finalScores: UserScore[] }>;
 
 /* prettier-ignore */ export type SystemWordAddedData = System<SystemMessageType.WordAdded, { username: string, word: string }>;
 /* prettier-ignore */ export type SystemWordUpdatedData = System<SystemMessageType.WordUpdated, { username: string, oldWord: string, newWord: string }>;
 /* prettier-ignore */ export type SystemWordStolenData = System<SystemMessageType.WordStolen, { oldUsername: string, newUsername: string, oldWord: string, newWord: string }>;
+/* prettier-ignore */ export type SystemNoTilesRemainingData = System<SystemMessageType.NoTilesRemaining>;
 
 export type ClientMessage =
 	| CreateRoomMessage
@@ -66,7 +74,8 @@ export type ClientMessage =
 	| LeaveRoomMessage
 	| StartGameMessage
 	| SendMessageMessage
-	| TurnTileMessage;
+	| TurnTileMessage
+	| ToggleReadyToEndMessage;
 
 export type ServerMessage =
 	| ErrorMessage
@@ -81,9 +90,15 @@ export type ServerMessage =
 	| TileAddedMessage
 	| TilesRemovedMessage
 	| SetCurrentTurnMessage
-	| SystemMessageMessage;
+	| SystemMessageMessage
+	| UserToggledReadyToEndMessage
+	| GameEndedMessage;
 
-export type SystemMessage = SystemWordAddedData | SystemWordUpdatedData | SystemWordStolenData;
+export type SystemMessage =
+	| SystemWordAddedData
+	| SystemWordUpdatedData
+	| SystemWordStolenData
+	| SystemNoTilesRemainingData;
 
 export type ServerMessageDataType<T extends ServerMessageType> = Extract<
 	ServerMessage,
