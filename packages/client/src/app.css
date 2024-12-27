@@ -1,15 +1,15 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 body {
-  @apply font-mono;
+	@apply font-mono;
 }
 
 input {
-  @apply border-2 border-gray-300 px-2 py-1 rounded-md focus:border-gray-400 focus:outline-none;
+	@apply rounded-md border-2 border-gray-300 px-2 py-1 focus:border-gray-400 focus:outline-none;
 }
 
 button {
-  @apply bg-orange-200 text-orange-800 px-2 py-1 rounded-md border-2 border-orange-800 hover:bg-orange-300 focus:bg-orange-300 focus:outline-none disabled:opacity-50 disabled:hover:bg-orange-200 disabled:focus:bg-orange-200 disabled:cursor-not-allowed;
+	@apply rounded-md border-2 border-orange-800 bg-orange-200 px-2 py-1 text-orange-800 hover:bg-orange-300 focus:bg-orange-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-orange-200 disabled:focus:bg-orange-200;
 }
