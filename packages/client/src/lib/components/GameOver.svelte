@@ -22,7 +22,6 @@
 				</li>
 			{/each}
 		</ul>
-		<!-- TODO: Change this back to <= 1 -->
 		<button disabled={!client?.isHost()} onclick={() => client?.startGame()}>Restart Game</button>
 	</div>
 </div>

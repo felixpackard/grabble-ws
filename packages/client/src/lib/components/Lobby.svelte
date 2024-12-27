@@ -15,8 +15,7 @@
 				<li>{user.username}{user.id === client?.getHostId() ? " (host)" : ""}</li>
 			{/each}
 		</ul>
-		<!-- TODO: Change this back to <= 1 -->
-		<button disabled={users.length <= 0 || !client?.isHost()} onclick={() => client?.startGame()}
+		<button disabled={users.length <= 1 || !client?.isHost()} onclick={() => client?.startGame()}
 			>Start Game [{users.length} player{users.length > 1 ? "s" : ""}]</button>
 	</div>
 </div>
