@@ -18,6 +18,7 @@ const server = Bun.serve<WebSocketData>({
 		return serveStatic("packages/client/build")(req);
 	},
 	websocket: {
+		idleTimeout: 60 * 10, // 10 minutes
 		publishToSelf: false,
 		async message(ws, message) {
 			if (typeof message !== "string") {
