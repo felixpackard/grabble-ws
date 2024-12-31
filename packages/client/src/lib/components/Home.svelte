@@ -2,7 +2,7 @@
 	import { uppercase } from "$lib/actions/uppercase";
 	import { SocketState, SocketStateLabel, WebSocketClient } from "$lib/websocket.svelte";
 
-	let username = $state("");
+	let username = $state(localStorage.getItem("defaultUsername") ?? "");
 	let roomCode = $state("");
 
 	let { client }: { client: WebSocketClient | null } = $props();
@@ -14,6 +14,12 @@
 	function joinGame() {
 		// TODO: Add validation and error messages
 		client?.joinRoom(roomCode, username);
+	}
+
+	function updateLocalStorage() {
+		if (username.length) {
+			localStorage.setItem("defaultUsername", username);
+		}
 	}
 
 	const stateColor = $derived(() => {
@@ -36,7 +42,12 @@
 	<div class="flex max-w-md flex-col gap-2 rounded-lg border-2 border-gray-300 p-4 shadow-md">
 		<h1 class="font-bold">grabble-ws</h1>
 		<p>grabble-ws is a websockets server that allows you to play grabble with your friends.</p>
-		<input type="text" placeholder="Enter your username" use:uppercase bind:value={username} />
+		<input
+			type="text"
+			placeholder="Enter your username"
+			use:uppercase
+			bind:value={username}
+			onchange={updateLocalStorage} />
 		<div class="mt-4 flex flex-col items-center gap-2">
 			<button class="w-full" onclick={createGame}>Create a Game</button>
 			<div class="flex items-center gap-2 text-gray-500">
