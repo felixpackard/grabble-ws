@@ -13,6 +13,7 @@
 		"lint": "prettier --check ."
 	},
 	"dependencies": {
+		"@icons-pack/svelte-simple-icons": "^4.0.1",
 		"lodash": "^4.17.21",
 		"lucide-svelte": "^0.469.0",
 		"shared": "workspace:*",

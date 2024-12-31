@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { uppercase } from "$lib/actions/uppercase";
 	import { SocketState, SocketStateLabel, WebSocketClient } from "$lib/websocket.svelte";
+	import { SiGithub } from "@icons-pack/svelte-simple-icons";
 
 	let username = $state(localStorage.getItem("defaultUsername") ?? "");
 	let roomCode = $state("");
@@ -35,9 +36,19 @@
 </script>
 
 <div class="flex h-svh w-screen items-center justify-center">
-	<div class="fixed left-4 top-4 flex items-center gap-2 text-sm">
-		<div class="size-3 rounded-full {stateColor()}"></div>
-		<span>{SocketStateLabel.get(client?.getState() ?? SocketState.Disconnected)}</span>
+	<div class="fixed left-4 right-4 top-4 flex items-center justify-between text-sm">
+		<div class="flex items-center gap-2">
+			<div class="size-3 rounded-full {stateColor()}"></div>
+			<span>{SocketStateLabel.get(client?.getState() ?? SocketState.Disconnected)}</span>
+		</div>
+		<a
+			href="https://github.com/felixpackard/grabble-ws"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="flex items-center gap-2 hover:underline">
+			<SiGithub size={16} />
+			View on GitHub
+		</a>
 	</div>
 	<div class="flex max-w-md flex-col gap-2 rounded-lg border-2 border-gray-300 p-4 shadow-md">
 		<h1 class="font-bold">grabble-ws</h1>
