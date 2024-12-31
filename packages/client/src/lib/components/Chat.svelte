@@ -5,6 +5,7 @@
 	import { MessageType } from "shared/types/user";
 	import { onMount } from "svelte";
 	import RoomCode from "./RoomCode.svelte";
+	import Leave from "./Leave.svelte";
 
 	let message = $state("");
 
@@ -43,7 +44,11 @@
 <div class="flex h-full flex-col gap-2">
 	<div class="flex items-center justify-between text-sm">
 		<h1 class="font-bold">Chat</h1>
-		<RoomCode {client} />
+		{#if client?.isGameRunning()}
+			<Leave {client} />
+		{:else}
+			<RoomCode {client} />
+		{/if}
 	</div>
 	<div
 		bind:this={container}

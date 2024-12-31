@@ -79,6 +79,21 @@ export class WebSocketClient {
 		return WebSocketClient.instance;
 	}
 
+	private reset() {
+		this.roomCode = null;
+		this.hostId = null;
+		this.gameStarted = false;
+		this.connectedUsers = {};
+		this.turnOrderIds = [];
+		this.chatMessages = [];
+		this.availableTiles = [];
+		this.remainingTileCount = 0;
+		this.currentTurnId = null;
+		this.readyToEnd = false;
+		this.gameEnded = false;
+		this.finalScores = [];
+	}
+
 	private createSocket() {
 		this.state = SocketState.Connecting;
 
@@ -384,6 +399,12 @@ export class WebSocketClient {
 	public joinRoom(roomCode: string, username: string) {
 		this.assertReady();
 		this.send(ClientMessageType.JoinRoom, { roomCode, username });
+	}
+
+	public leaveRoom() {
+		this.assertReady();
+		this.send(ClientMessageType.LeaveRoom, {});
+		this.reset();
 	}
 
 	public sendMessage(message: string) {

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { WebSocketClient } from "$lib/websocket.svelte";
-	import { pickBy } from "lodash";
 	import Words from "./Words.svelte";
 
 	let { client }: { client: WebSocketClient | null } = $props();
