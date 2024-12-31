@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { WebSocketClient } from "$lib/websocket.svelte";
-	import { CirclePlus, Clipboard, ClockAlert, Replace, Send, Swords } from "lucide-svelte";
+	import { CirclePlus, ClockAlert, Replace, Send, Swords } from "lucide-svelte";
 	import { SystemMessageType } from "shared/types/message";
 	import { MessageType } from "shared/types/user";
 	import { onMount } from "svelte";
