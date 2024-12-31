@@ -41,7 +41,7 @@
 	</div>
 	<div class="flex max-w-md flex-col gap-2 rounded-lg border-2 border-gray-300 p-4 shadow-md">
 		<h1 class="font-bold">grabble-ws</h1>
-		<p>grabble-ws is a websockets server that allows you to play grabble with your friends.</p>
+		<p>real-time word theft over the internet.</p>
 		<input
 			type="text"
 			placeholder="Enter your username"
