@@ -31,9 +31,7 @@
 		{/each}
 	</div>
 	<div class="flex shrink-0 flex-col gap-2">
-    <div class="text-xs text-gray-500 text-center">
-      [TAB] to turn
-    </div>
+		<div class="text-center text-xs text-gray-500">[TAB] to turn</div>
 		<button
 			disabled={!client?.isCurrentTurn() || client?.getRemainingTileCount() === 0}
 			onclick={() => client?.turnTile()}

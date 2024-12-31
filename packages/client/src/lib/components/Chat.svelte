@@ -1,9 +1,10 @@
 <script lang="ts">
 	import type { WebSocketClient } from "$lib/websocket.svelte";
-	import { CirclePlus, ClockAlert, Replace, Send, Swords } from "lucide-svelte";
+	import { CirclePlus, Clipboard, ClockAlert, Replace, Send, Swords } from "lucide-svelte";
 	import { SystemMessageType } from "shared/types/message";
 	import { MessageType } from "shared/types/user";
 	import { onMount } from "svelte";
+	import RoomCode from "./RoomCode.svelte";
 
 	let message = $state("");
 
@@ -42,10 +43,7 @@
 <div class="flex h-full flex-col gap-2">
 	<div class="flex items-center justify-between text-sm">
 		<h1 class="font-bold">Chat</h1>
-		<div>
-			<span>Room Code:</span>
-			<span class="font-bold">{client?.getRoomCode()}</span>
-		</div>
+		<RoomCode {client} />
 	</div>
 	<div
 		bind:this={container}
