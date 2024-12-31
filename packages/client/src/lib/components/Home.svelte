@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { uppercase } from "$lib/actions/uppercase";
 	import { SocketState, SocketStateLabel, WebSocketClient } from "$lib/websocket.svelte";
-	import { SiGithub } from "@icons-pack/svelte-simple-icons";
 
 	let username = $state(localStorage.getItem("defaultUsername") ?? "");
 	let roomCode = $state("");
@@ -46,7 +45,11 @@
 			target="_blank"
 			rel="noopener noreferrer"
 			class="flex items-center gap-2 hover:underline">
-			<SiGithub size={16} />
+			<img
+				height="16"
+				width="16"
+				src="https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/github.svg"
+				alt="" />
 			View on GitHub
 		</a>
 	</div>
