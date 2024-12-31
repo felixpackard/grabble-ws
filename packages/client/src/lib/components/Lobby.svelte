@@ -16,6 +16,6 @@
 			{/each}
 		</ul>
 		<button disabled={users.length <= 1 || !client?.isHost()} onclick={() => client?.startGame()}
-			>Start Game [{users.length} player{users.length > 1 ? "s" : ""}]</button>
+			>Start Game [{users.length}/4 players]</button>
 	</div>
 </div>

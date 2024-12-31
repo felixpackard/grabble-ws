@@ -3,6 +3,7 @@
 	import Chat from "./Chat.svelte";
 	import GameOver from "./GameOver.svelte";
 	import Lobby from "./Lobby.svelte";
+	import Opponents from "./Opponents.svelte";
 	import Tiles from "./Tiles.svelte";
 	import Words from "./Words.svelte";
 
@@ -25,19 +26,13 @@
 <div class="flex h-svh gap-4 p-4">
 	{#if client?.isGameRunning()}
 		<div class="flex flex-1 flex-col justify-between">
-			<div class="flex flex-col gap-2">
-				<div class="flex items-center gap-2 text-sm">
-					<div class="size-3 rounded-full {stateColor}"></div>
-					<div>It's <span class="font-bold">{playingUser?.username}</span>'s turn</div>
-				</div>
-				<Words {client} userId={lastOpponentPlayingId} />
-			</div>
+			<Opponents {client} />
 			{#if client?.hasGameEnded()}
 				<GameOver {client} />
 			{:else}
 				<Tiles {client} />
 			{/if}
-			<Words {client} userId={client?.getUserId()} />
+      <Words {client} userId={client?.getUserId()} />
 		</div>
 	{:else}
 		<Lobby {client} />

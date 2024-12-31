@@ -8,12 +8,30 @@
 	let words = $derived(user?.words ?? []);
 </script>
 
-<div class="flex min-h-10 flex-wrap items-center gap-6 gap-y-4">
-	{#each words as word}
-		<div class="flex items-center gap-0.5">
-			{#each word.split("") as tile}
-				<Tile {tile} />
-			{/each}
-		</div>
-	{/each}
+<div class="flex flex-col gap-2">
+  <div class="flex items-center gap-2 text-sm">
+    <span>
+      {user?.id === client?.getUserId() ? "You" : user?.username}
+    </span>
+    {#if user?.id === client?.getCurrentTurnId()}
+      <span class="inline-flex items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-bold text-green-700 ring-1 ring-inset ring-green-600/20">
+        Playing
+      </span>
+    {/if}
+  </div>
+  <div class="flex flex-wrap items-center gap-6 gap-y-4">
+    {#if words.length === 0}
+      <div class="h-10 px-10 border-gray-300 border-2 border-dashed rounded-md flex items-center justify-center text-sm text-gray-500">
+        No words yet
+      </div>
+    {:else}
+      {#each words as word}
+        <div class="flex items-center gap-0.5">
+          {#each word.split("") as tile}
+            <Tile {tile} />
+          {/each}
+        </div>
+      {/each}
+    {/if}
+  </div>
 </div>

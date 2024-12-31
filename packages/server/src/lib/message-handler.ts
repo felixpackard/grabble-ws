@@ -12,7 +12,7 @@ import type { Room } from "shared/types/room";
 import { randomUUIDv7, type Server, type ServerWebSocket } from "bun";
 import { customAlphabet } from "nanoid";
 import type { WebSocketData } from "shared/types/websocket";
-import { mapValues, sample, shuffle, values } from "lodash";
+import { keys, mapValues, sample, shuffle, values } from "lodash";
 import { getPossibleWords, letterCountToLetters, type Word } from "./anagrams";
 import { Trie } from "./trie";
 import { resolve } from "path";
@@ -182,6 +182,11 @@ export class MessageHandler {
 
 		if (!this.rooms[message.data.roomCode]) {
 			ws.send(this.createResponse(ServerMessageType.Error, { message: "Room not found" }));
+			return;
+		}
+
+		if (keys(this.rooms[message.data.roomCode].connectedUsers).length >= 4) {
+			ws.send(this.createResponse(ServerMessageType.Error, { message: "Room is full" }));
 			return;
 		}
 
