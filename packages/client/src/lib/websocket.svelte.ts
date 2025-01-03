@@ -199,19 +199,10 @@ export class WebSocketClient {
 	}
 
 	private handleSystemMessage(message: SystemMessageMessage) {
-		switch (message.data.type) {
-			case SystemMessageType.WordAdded:
-			case SystemMessageType.WordUpdated:
-			case SystemMessageType.WordStolen:
-			case SystemMessageType.NoTilesRemaining:
-				this.chatMessages.push({
-					type: MessageType.System,
-					data: message.data,
-				});
-				break;
-			default:
-				console.warn(`Unhandled system message type: ${(message.data as any).type}`);
-		}
+		this.chatMessages.push({
+			type: MessageType.System,
+			data: message.data,
+		});
 	}
 
 	private handleUserToggledReadyToEnd(message: UserToggledReadyToEndMessage) {

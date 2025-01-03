@@ -19,7 +19,8 @@
 				<li>{user.username}{user.id === client?.getHostId() ? " (host)" : ""}</li>
 			{/each}
 		</ul>
-		<button disabled={users.length <= 1 || !client?.isHost()} onclick={() => client?.startGame()}
-			>Start Game [{users.length}/4 players]</button>
+		<button
+			disabled={(users.length <= 1 || !client?.isHost()) && !import.meta.env.DEV}
+			onclick={() => client?.startGame()}>Start Game [{users.length}/4 players]</button>
 	</div>
 </div>

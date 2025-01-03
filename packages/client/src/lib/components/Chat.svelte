@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { WebSocketClient } from "$lib/websocket.svelte";
-	import { CirclePlus, ClockAlert, Replace, Send, Swords } from "lucide-svelte";
+	import { CirclePlus, ClockAlert, Flag, Replace, Send, Swords } from "lucide-svelte";
 	import { SystemMessageType } from "shared/types/message";
 	import { MessageType } from "shared/types/user";
 	import { onMount } from "svelte";
@@ -77,6 +77,9 @@
 							<span class="font-bold uppercase">{message.data.data.oldWord}</span>{/if}
 						{#if message.data.type === SystemMessageType.NoTilesRemaining}<ClockAlert
 								class="inline-block size-5 text-red-600" /> No tiles remaining!{/if}
+						{#if message.data.type === SystemMessageType.GoingFirst}<Flag
+								class="inline-block size-5 text-blue-600" />
+							<span class="font-bold">{message.data.data.username}</span> is going first{/if}
 					{/if}
 				</div>
 			{/each}

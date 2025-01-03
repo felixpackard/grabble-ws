@@ -271,12 +271,23 @@ export class MessageHandler {
 			currentTurnId: sample(Object.keys(room.connectedUsers))!,
 		};
 
+		room = this.rooms[ws.data.roomCode];
+
 		values(room.connectedUsers).forEach((socket) => {
 			socket.data.user.words = [];
 			socket.data.user.readyToEnd = false;
 		});
 
 		server.publish(ws.data.roomCode, this.createRoomInfoResponse(ws.data.roomCode));
+		server.publish(
+			ws.data.roomCode,
+			this.createResponse(ServerMessageType.SystemMessage, {
+				type: SystemMessageType.GoingFirst,
+				data: {
+					username: room.connectedUsers[room.currentTurnId!].data.user.username!,
+				},
+			}),
+		);
 	}
 
 	private tryMakeWord(ws: ServerWebSocket<WebSocketData>, word: string) {

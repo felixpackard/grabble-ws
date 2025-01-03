@@ -33,6 +33,7 @@ export enum SystemMessageType {
 	WordUpdated,
 	WordStolen,
 	NoTilesRemaining,
+	GoingFirst,
 }
 
 type Client<T extends ClientMessageType, J extends object = {}> = { type: T; data: J };
@@ -67,6 +68,7 @@ type System<T extends SystemMessageType, J extends object = {}> = { type: T; dat
 /* prettier-ignore */ export type SystemWordUpdatedData = System<SystemMessageType.WordUpdated, { username: string, oldWord: string, newWord: string }>;
 /* prettier-ignore */ export type SystemWordStolenData = System<SystemMessageType.WordStolen, { oldUsername: string, newUsername: string, oldWord: string, newWord: string }>;
 /* prettier-ignore */ export type SystemNoTilesRemainingData = System<SystemMessageType.NoTilesRemaining>;
+/* prettier-ignore */ export type SystemGoingFirstData = System<SystemMessageType.GoingFirst, { username: string }>;
 
 export type ClientMessage =
 	| CreateRoomMessage
@@ -98,7 +100,8 @@ export type SystemMessage =
 	| SystemWordAddedData
 	| SystemWordUpdatedData
 	| SystemWordStolenData
-	| SystemNoTilesRemainingData;
+	| SystemNoTilesRemainingData
+	| SystemGoingFirstData;
 
 export type ServerMessageDataType<T extends ServerMessageType> = Extract<
 	ServerMessage,
