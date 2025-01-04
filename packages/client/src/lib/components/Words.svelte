@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { WebSocketClient } from "$lib/websocket.svelte";
-	import Tile from "./Tile.svelte";
+	import Word from "./Word.svelte";
 
 	let { client, userId }: { client: WebSocketClient | null; userId: string | null } = $props();
 
@@ -28,11 +28,9 @@
 			</div>
 		{:else}
 			{#each words as word}
-				<div class="flex items-center gap-0.5">
-					{#each word.split("") as tile}
-						<Tile {tile} />
-					{/each}
-				</div>
+				{#key `${user?.id}-${word}`}
+					<Word {word} />
+				{/key}
 			{/each}
 		{/if}
 	</div>
