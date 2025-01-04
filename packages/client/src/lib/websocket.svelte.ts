@@ -2,7 +2,6 @@ import { shuffle } from "lodash";
 import {
 	ClientMessageType,
 	ServerMessageType,
-	SystemMessageType,
 	type ClientMessageDataType,
 	type GameEndedMessage,
 	type RoomInfoMessage,
@@ -29,6 +28,7 @@ import {
 	type UserScore,
 } from "shared/types/user";
 import { toast } from "svelte-sonner";
+import { Sounds } from "./sound";
 
 export enum SocketState {
 	Connected,
@@ -170,6 +170,7 @@ export class WebSocketClient {
 
 	private handleUserWordAdded(message: UserWordAddedMessage) {
 		this.connectedUsers[message.data.userId].words.push(message.data.word);
+		Sounds.MAKE_WORD.play();
 	}
 
 	private handleUserWordRemoved(message: UserWordRemovedMessage) {
@@ -180,11 +181,13 @@ export class WebSocketClient {
 	private handleUserWordUpdated(message: UserWordUpdatedMessage) {
 		const index = this.connectedUsers[message.data.userId].words.indexOf(message.data.oldWord);
 		this.connectedUsers[message.data.userId].words[index] = message.data.newWord;
+		Sounds.MAKE_WORD.play();
 	}
 
 	private handleTileAdded(message: TileAddedMessage) {
 		this.availableTiles.push(message.data.letter);
 		this.remainingTileCount--;
+		Sounds.TURN_TILE.play();
 	}
 
 	private handleTilesRemoved(message: TilesRemovedMessage) {
