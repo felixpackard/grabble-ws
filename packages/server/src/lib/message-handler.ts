@@ -163,6 +163,13 @@ export class MessageHandler {
 
 		// Notify the user
 		ws.send(this.createRoomInfoResponse(roomCode));
+
+		ws.send(
+			this.createResponse(ServerMessageType.SystemMessage, {
+				type: SystemMessageType.UserJoined,
+				data: { username: ws.data.user.username },
+			}),
+		);
 	}
 
 	private handleJoinRoom(
@@ -220,6 +227,14 @@ export class MessageHandler {
 				user: ws.data.user,
 			}),
 		);
+
+		server.publish(
+			ws.data.roomCode,
+			this.createResponse(ServerMessageType.SystemMessage, {
+				type: SystemMessageType.UserJoined,
+				data: { username: ws.data.user.username },
+			}),
+		);
 	}
 
 	private handleLeaveRoom(server: Server, ws: ServerWebSocket<WebSocketData>): void {
@@ -244,6 +259,14 @@ export class MessageHandler {
 			server.publish(
 				ws.data.roomCode,
 				this.createResponse(ServerMessageType.UserLeft, { userId: ws.data.user.id }),
+			);
+
+			server.publish(
+				ws.data.roomCode,
+				this.createResponse(ServerMessageType.SystemMessage, {
+					type: SystemMessageType.UserLeft,
+					data: { username: ws.data.user.username! },
+				}),
 			);
 		}
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { WebSocketClient } from "$lib/websocket.svelte";
-	import { CirclePlus, ClockAlert, Flag, Replace, Send, Swords } from "lucide-svelte";
+	import { CirclePlus, ClockAlert, Flag, LogIn, Replace, Send, Swords } from "lucide-svelte";
 	import { SystemMessageType } from "shared/types/message";
 	import { MessageType } from "shared/types/user";
 	import { onMount } from "svelte";
@@ -56,30 +56,44 @@
 		<div class="flex flex-col gap-2">
 			{#each client?.getChatMessages() ?? [] as message}
 				<div>
-					{#if message.type === MessageType.User}<span class="font-bold"
-							>{message.data.username}:</span>
-						{message.data.message}{/if}
+					{#if message.type === MessageType.User}
+						<span class="font-bold">{message.data.username}:</span>
+						<span>{message.data.message}</span>
+					{/if}
 					{#if message.type === MessageType.System}
-						{#if message.data.type === SystemMessageType.WordAdded}<CirclePlus
-								class="inline-block size-5 text-green-600" />
-							<span class="font-bold">{message.data.data.username}</span>
-							made <span class="font-bold uppercase">{message.data.data.word}</span>{/if}
-						{#if message.data.type === SystemMessageType.WordUpdated}<Replace
-								class="inline-block size-5 text-yellow-600" />
-							<span class="font-bold">{message.data.data.username}</span>
-							made <span class="font-bold uppercase">{message.data.data.newWord}</span> from
-							<span class="font-bold uppercase">{message.data.data.oldWord}</span>{/if}
-						{#if message.data.type === SystemMessageType.WordStolen}<Swords
-								class="inline-block size-5 text-red-600" />
-							<span class="font-bold">{message.data.data.newUsername}</span>
-							made <span class="font-bold uppercase">{message.data.data.newWord}</span> from
+						{#if message.data.type === SystemMessageType.WordAdded}
+							<CirclePlus class="inline-block size-5 text-green-600" />
+							<span class="font-bold">{message.data.data.username}</span> made
+							<span class="font-bold uppercase">{message.data.data.word}</span>
+						{/if}
+						{#if message.data.type === SystemMessageType.WordUpdated}
+							<Replace class="inline-block size-5 text-yellow-600" />
+							<span class="font-bold">{message.data.data.username}</span> made
+							<span class="font-bold uppercase">{message.data.data.newWord}</span> from
+							<span class="font-bold uppercase">{message.data.data.oldWord}</span>
+						{/if}
+						{#if message.data.type === SystemMessageType.WordStolen}
+							<Swords class="inline-block size-5 text-red-600" />
+							<span class="font-bold">{message.data.data.newUsername}</span> made
+							<span class="font-bold uppercase">{message.data.data.newWord}</span> from
 							<span class="font-bold uppercase">{message.data.data.oldUsername}</span>'s
-							<span class="font-bold uppercase">{message.data.data.oldWord}</span>{/if}
-						{#if message.data.type === SystemMessageType.NoTilesRemaining}<ClockAlert
-								class="inline-block size-5 text-red-600" /> No tiles remaining!{/if}
-						{#if message.data.type === SystemMessageType.GoingFirst}<Flag
-								class="inline-block size-5 text-blue-600" />
-							<span class="font-bold">{message.data.data.username}</span> is going first{/if}
+							<span class="font-bold uppercase">{message.data.data.oldWord}</span>
+						{/if}
+						{#if message.data.type === SystemMessageType.NoTilesRemaining}
+							<ClockAlert class="inline-block size-5 text-red-600" /> No tiles remaining!
+						{/if}
+						{#if message.data.type === SystemMessageType.GoingFirst}
+							<Flag class="inline-block size-5 text-blue-600" />
+							<span class="font-bold">{message.data.data.username}</span> is going first
+						{/if}
+						{#if message.data.type === SystemMessageType.UserJoined}
+							<LogIn class="inline-block size-5 text-green-600" />
+							<span class="font-bold">{message.data.data.username}</span> joined the game
+						{/if}
+						{#if message.data.type === SystemMessageType.UserLeft}
+							<LogIn class="inline-block size-5 text-red-600" />
+							<span class="font-bold">{message.data.data.username}</span> left the game
+						{/if}
 					{/if}
 				</div>
 			{/each}
