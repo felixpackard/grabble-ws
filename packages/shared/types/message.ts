@@ -36,6 +36,7 @@ export enum SystemMessageType {
 	GoingFirst,
 	UserJoined,
 	UserLeft,
+	GameEnded,
 }
 
 type Client<T extends ClientMessageType, J extends object = {}> = { type: T; data: J };
@@ -73,6 +74,7 @@ type System<T extends SystemMessageType, J extends object = {}> = { type: T; dat
 /* prettier-ignore */ export type SystemGoingFirstData = System<SystemMessageType.GoingFirst, { username: string }>;
 /* prettier-ignore */ export type SystemUserJoinedData = System<SystemMessageType.UserJoined, { username: string }>;
 /* prettier-ignore */ export type SystemUserLeftData = System<SystemMessageType.UserLeft, { username: string }>;
+/* prettier-ignore */ export type SystemGameEndedData = System<SystemMessageType.GameEnded, { winner: string | null; }>;
 
 export type ClientMessage =
 	| CreateRoomMessage
@@ -107,7 +109,8 @@ export type SystemMessage =
 	| SystemNoTilesRemainingData
 	| SystemGoingFirstData
 	| SystemUserJoinedData
-	| SystemUserLeftData;
+	| SystemUserLeftData
+	| SystemGameEndedData;
 
 export type ServerMessageDataType<T extends ServerMessageType> = Extract<
 	ServerMessage,

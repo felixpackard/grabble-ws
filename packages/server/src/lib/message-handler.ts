@@ -568,6 +568,16 @@ export class MessageHandler {
 					finalScores: scores,
 				}),
 			);
+
+			server.publish(
+				ws.data.roomCode!,
+				this.createResponse(ServerMessageType.SystemMessage, {
+					type: SystemMessageType.GameEnded,
+					data: {
+						winner: scores[0].score === scores[1].score ? null : scores[0].username,
+					},
+				}),
+			);
 		}
 	}
 

@@ -1,6 +1,15 @@
 <script lang="ts">
 	import type { WebSocketClient } from "$lib/websocket.svelte";
-	import { CirclePlus, ClockAlert, Flag, LogIn, Replace, Send, Swords } from "lucide-svelte";
+	import {
+		CirclePlus,
+		ClockAlert,
+		Flag,
+		LogIn,
+		PartyPopper,
+		Replace,
+		Send,
+		Swords,
+	} from "lucide-svelte";
 	import { SystemMessageType } from "shared/types/message";
 	import { MessageType } from "shared/types/user";
 	import { onMount } from "svelte";
@@ -93,6 +102,14 @@
 						{#if message.data.type === SystemMessageType.UserLeft}
 							<LogIn class="inline-block size-5 text-red-600" />
 							<span class="font-bold">{message.data.data.username}</span> left the game
+						{/if}
+						{#if message.data.type === SystemMessageType.GameEnded}
+							<PartyPopper class="inline-block size-5 text-purple-600" />
+							{#if message.data.data.winner === null}
+								<span class="font-bold">It's a draw!</span>
+							{:else}
+								<span class="font-bold">{message.data.data.winner}</span> wins!
+							{/if}
 						{/if}
 					{/if}
 				</div>

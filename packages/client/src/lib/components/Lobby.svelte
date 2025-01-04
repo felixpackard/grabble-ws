@@ -20,7 +20,7 @@
 			{/each}
 		</ul>
 		<button
-			disabled={(users.length <= 1 || !client?.isHost()) && !import.meta.env.DEV}
+			disabled={(users.length <= 1 && !import.meta.env.DEV) || !client?.isHost()}
 			onclick={() => client?.startGame()}>Start Game [{users.length}/4 players]</button>
 	</div>
 </div>
