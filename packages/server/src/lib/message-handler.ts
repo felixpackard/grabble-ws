@@ -17,6 +17,7 @@ import { getPossibleWords, letterCountToLetters, type Word } from "./anagrams";
 import { Trie } from "./trie";
 import { resolve } from "path";
 import { scoreDiff, scoreWord } from "./score";
+import { notify } from "./telegram";
 
 const repeat = (letter: string, count: number) => new Array(count).fill(letter);
 
@@ -311,6 +312,14 @@ export class MessageHandler {
 				},
 			}),
 		);
+
+		const usernames = values(room.connectedUsers).map((socket) => socket.data.user.username!);
+
+		if (process.env.APP_ENV === "production") {
+			notify(
+				`[Grabble] Game started with ${usernames.length} player${usernames.length === 1 ? "" : "s"}: ${usernames.join(", ")}`,
+			);
+		}
 	}
 
 	private tryMakeWord(ws: ServerWebSocket<WebSocketData>, word: string) {

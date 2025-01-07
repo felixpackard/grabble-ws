@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { WebSocketClient } from "$lib/websocket.svelte";
-	import { values } from "lodash";
 	import { ConfettiCannon } from "svelte-canvas-confetti";
 
 	let { client }: { client: WebSocketClient | null } = $props();

@@ -1,6 +1,7 @@
 import serveStatic from "serve-static-bun";
 import { MessageHandler } from "./lib/message-handler";
 import { type WebSocketData } from "shared/types/websocket";
+import { ServerMessageType } from "shared/types/message";
 
 const messageHandler = new MessageHandler();
 
@@ -22,7 +23,12 @@ const server = Bun.serve<WebSocketData>({
 		publishToSelf: false,
 		async message(ws, message) {
 			if (typeof message !== "string") {
-				ws.send("Invalid message");
+				ws.send(
+					JSON.stringify({
+						type: ServerMessageType.Error,
+						data: { message: "Invalid message" },
+					}),
+				);
 				return;
 			}
 

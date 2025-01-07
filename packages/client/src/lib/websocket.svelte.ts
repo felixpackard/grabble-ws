@@ -8,7 +8,6 @@ import {
 	type ServerMessage,
 	type SetCurrentTurnMessage,
 	type SetIdMessage,
-	type SystemMessage,
 	type SystemMessageMessage,
 	type TileAddedMessage,
 	type TilesRemovedMessage,
@@ -20,13 +19,7 @@ import {
 	type UserWordRemovedMessage,
 	type UserWordUpdatedMessage,
 } from "shared/types/message";
-import {
-	MessageType,
-	type ChatMessage,
-	type User,
-	type UserMessage,
-	type UserScore,
-} from "shared/types/user";
+import { MessageType, type ChatMessage, type User, type UserScore } from "shared/types/user";
 import { toast } from "svelte-sonner";
 import { Sounds } from "./sound";
 
